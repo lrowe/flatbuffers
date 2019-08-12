@@ -34,7 +34,8 @@ mod monster_test_generated;
 pub use monster_test_generated::my_game;
 
 // verbatim from the test suite:
-fn create_serialized_example_with_generated_code(builder: &mut flatbuffers::FlatBufferBuilder) {
+fn create_serialized_example_with_generated_code(mut builder: flatbuffers::FlatBufferBuilder
+) -> flatbuffers::FlatBuffer {
     let mon = {
         let _ = builder.create_vector_of_strings(&["these", "unused", "strings", "check", "the", "create_vector_of_strings", "function"]);
 
@@ -52,7 +53,7 @@ fn create_serialized_example_with_generated_code(builder: &mut flatbuffers::Flat
             name: Some(builder.create_string("MyMonster")),
             pos: Some(&pos),
             test_type: my_game::example::Any::Monster,
-            test: Some(my_game::example::Monster::create(builder, &my_game::example::MonsterArgs{
+            test: Some(my_game::example::Monster::create(&mut builder, &my_game::example::MonsterArgs{
                 name: Some(fred_name),
                 ..Default::default()
             }).as_union_value()),
@@ -62,9 +63,9 @@ fn create_serialized_example_with_generated_code(builder: &mut flatbuffers::Flat
             testarrayofstring: Some(builder.create_vector(&[s0, s1])),
             ..Default::default()
         };
-        my_game::example::Monster::create(builder, &args)
+        my_game::example::Monster::create(&mut builder, &args)
     };
-    my_game::example::finish_monster_buffer(builder, mon);
+    my_game::example::finish_monster_buffer(builder, mon)
 }
 
 fn main() {
@@ -76,23 +77,24 @@ fn main() {
         assert_eq!(before + 1, after);
     }
 
-    let builder = &mut flatbuffers::FlatBufferBuilder::new();
-    {
+    let mut builder = flatbuffers::FlatBufferBuilder::new();
+
+    builder = {
         // warm up the builder (it can make small allocs internally, such as for storing vtables):
-        create_serialized_example_with_generated_code(builder);
-    }
+        let fbuf = create_serialized_example_with_generated_code(builder);
+        // reset the builder, clearing its heap-allocated memory:
+        fbuf.reset()
+    };
 
-    // reset the builder, clearing its heap-allocated memory:
-    builder.reset();
 
-    {
+    let fbuf = {
         let before = A.n_allocs();
-        create_serialized_example_with_generated_code(builder);
+        let fbuf = create_serialized_example_with_generated_code(builder);
         let after = A.n_allocs();
         assert_eq!(before, after, "KO: Heap allocs occurred in Rust write path");
-    }
-
-    let buf = builder.finished_data();
+        fbuf
+    };
+    let buf = fbuf.finished_data();
 
     // use the allocation tracking on the read path:
     {

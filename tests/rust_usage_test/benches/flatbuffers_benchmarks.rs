@@ -27,9 +27,9 @@ pub use monster_test_generated::my_game;
 
 fn traverse_canonical_buffer(bench: &mut Bencher) {
     let owned_data = {
-        let mut builder = &mut flatbuffers::FlatBufferBuilder::new();
-        create_serialized_example_with_generated_code(&mut builder, true);
-        builder.finished_data().to_vec()
+        let builder = flatbuffers::FlatBufferBuilder::new();
+        let fb = create_serialized_example_with_generated_code(builder);
+        fb.finished_data().to_vec()
     };
     let data = &owned_data[..];
     let n = data.len() as u64;
@@ -40,37 +40,47 @@ fn traverse_canonical_buffer(bench: &mut Bencher) {
 }
 
 fn create_canonical_buffer_then_reset(bench: &mut Bencher) {
-    let mut builder = &mut flatbuffers::FlatBufferBuilder::new();
-    // warmup
-    create_serialized_example_with_generated_code(&mut builder, true);
-    let n = builder.finished_data().len() as u64;
-    builder.reset();
 
-    bench.iter(|| {
-        let _ = create_serialized_example_with_generated_code(&mut builder, true);
-        builder.reset();
-    });
+    struct Foo<'a>(flatbuffers::FlatBufferBuilder<'a>, u64);
+    impl <'a>Foo<'a> {
+        fn t(&mut self) {
+            let n;
+            self.0 = {
+                let fb = create_serialized_example_with_generated_code(self.0);
+                n = fb.finished_data().len() as u64;
+                fb.reset()
+            };
+            self.1 = n;
+        }
+    }
+    let mut foo = Foo(flatbuffers::FlatBufferBuilder::new(), 0);
+    foo.t();
+    let n = foo.1;
+
+    bench.iter(||{foo.t()});
 
     bench.bytes = n;
 }
 
 #[inline(always)]
-fn create_serialized_example_with_generated_code(builder: &mut flatbuffers::FlatBufferBuilder, finish: bool) -> usize{
+fn create_serialized_example_with_generated_code(
+    mut builder: flatbuffers::FlatBufferBuilder
+) -> flatbuffers::FlatBuffer {
     let s0 = builder.create_string("test1");
     let s1 = builder.create_string("test2");
     let t0_name = builder.create_string("Barney");
     let t1_name = builder.create_string("Fred");
     let t2_name = builder.create_string("Wilma");
-    let t0 = my_game::example::Monster::create(builder, &my_game::example::MonsterArgs{
+    let t0 = my_game::example::Monster::create(&mut builder, &my_game::example::MonsterArgs{
         hp: 1000,
         name: Some(t0_name),
         ..Default::default()
     });
-    let t1 = my_game::example::Monster::create(builder, &my_game::example::MonsterArgs{
+    let t1 = my_game::example::Monster::create(&mut builder, &my_game::example::MonsterArgs{
         name: Some(t1_name),
         ..Default::default()
     });
-    let t2 = my_game::example::Monster::create(builder, &my_game::example::MonsterArgs{
+    let t2 = my_game::example::Monster::create(&mut builder, &my_game::example::MonsterArgs{
         name: Some(t2_name),
         ..Default::default()
     });
@@ -87,7 +97,7 @@ fn create_serialized_example_with_generated_code(builder: &mut flatbuffers::Flat
             name: Some(name),
             pos: Some(&pos),
             test_type: my_game::example::Any::Monster,
-            test: Some(my_game::example::Monster::create(builder, &my_game::example::MonsterArgs{
+            test: Some(my_game::example::Monster::create(&mut builder, &my_game::example::MonsterArgs{
                 name: Some(fred_name),
                 ..Default::default()
             }).as_union_value()),
@@ -97,16 +107,13 @@ fn create_serialized_example_with_generated_code(builder: &mut flatbuffers::Flat
             testarrayoftables: Some(builder.create_vector(&[t0, t1, t2])),
             ..Default::default()
         };
-        my_game::example::Monster::create(builder, &args)
+        my_game::example::Monster::create(&mut builder, &args)
     };
-    if finish {
-        my_game::example::finish_monster_buffer(builder, mon);
+    let fb = my_game::example::finish_monster_buffer(builder, mon);
+    if fb.finished_data().len() == 0 {
+        unreachable!("Empty buffer?");
     }
-
-    builder.finished_data().len()
-
-    // make it do some work
-    // if builder.finished_data().len() == 0 { panic!("bad benchmark"); }
+    fb
 }
 
 #[inline(always)]

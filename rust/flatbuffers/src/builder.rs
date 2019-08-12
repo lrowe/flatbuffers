@@ -46,15 +46,66 @@ pub struct FlatBufferBuilder<'fbb> {
     head: usize,
 
     field_locs: Vec<FieldLoc>,
-    written_vtable_revpos: Vec<UOffsetT>,
+    written_vtable_revpos: Vec<UOffsetT>, // cleared
 
     nested: bool,
-    finished: bool,
 
     min_align: usize,
 
     _phantom: PhantomData<&'fbb ()>,
 }
+
+pub struct FlatBuffer {
+    owned_buf: Vec<u8>,
+    head: usize,
+    // These vectors are carried so they can be reused if the Flatbuffer is
+    // reset into a flatbufferBuilder
+    field_locs: Vec<FieldLoc>,
+    written_vtable_revpos: Vec<UOffsetT>, // cleared
+}
+impl<'fbb> FlatBuffer {
+    /// Clears the buffer and returns a FlatbufferBuilder, ready for reuse.
+    ///
+    /// If you are using a FlatBufferBuilder repeatedly, make sure to use this
+    /// function, because it re-uses the FlatBuffer's existing heap-allocated
+    /// `Vec<u8>` internal buffer. This offers significant speed improvements
+    /// as compared to creating a new FlatBufferBuilder for every new object.
+    pub fn reset(mut self) -> FlatBufferBuilder<'fbb> {
+        // memset only the part of the buffer that could be dirty:
+        {
+            let to_clear = self.owned_buf.len() - self.head;
+            let ptr = (&mut self.owned_buf[self.head..]).as_mut_ptr();
+            unsafe {
+                write_bytes(ptr, 0, to_clear);
+            }
+        }
+        let FlatBuffer { owned_buf, mut head, field_locs, mut written_vtable_revpos } = self;
+        head = owned_buf.len();
+        written_vtable_revpos.clear();
+        head = owned_buf.len();
+        FlatBufferBuilder {
+            owned_buf,
+            head,
+            field_locs,
+            written_vtable_revpos,
+            nested: false,
+            min_align: 0,
+            _phantom: PhantomData,
+        }
+    }
+    /// Get the byte slice for the data that has been written after a call to
+    /// one of the `finish` functions.
+    #[inline]
+    pub fn finished_data(&self) -> &[u8] {
+        &self.owned_buf[self.head..]
+    }
+    /// Destroy the FlatBuffer, returning its internal byte vector
+    /// and the index into it that represents the start of valid data.
+    pub fn collapse(self) -> (Vec<u8>, usize) {
+        (self.owned_buf, self.head)
+    }
+}
+
 
 impl<'fbb> FlatBufferBuilder<'fbb> {
     /// Create a FlatBufferBuilder that is ready for writing.
@@ -77,19 +128,15 @@ impl<'fbb> FlatBufferBuilder<'fbb> {
         FlatBufferBuilder {
             owned_buf: vec![0u8; size],
             head: size,
-
             field_locs: Vec::new(),
             written_vtable_revpos: Vec::new(),
-
             nested: false,
-            finished: false,
-
             min_align: 0,
-
             _phantom: PhantomData,
         }
     }
 
+    // TODO(cneo): Delete?
     /// Reset the FlatBufferBuilder internal state. Use this method after a
     /// call to a `finish` function in order to re-use a FlatBufferBuilder.
     ///
@@ -115,7 +162,6 @@ impl<'fbb> FlatBufferBuilder<'fbb> {
         self.written_vtable_revpos.clear();
 
         self.nested = false;
-        self.finished = false;
 
         self.min_align = 0;
     }
@@ -333,13 +379,6 @@ impl<'fbb> FlatBufferBuilder<'fbb> {
     pub fn unfinished_data(&self) -> &[u8] {
         &self.owned_buf[self.head..]
     }
-    /// Get the byte slice for the data that has been written after a call to
-    /// one of the `finish` functions.
-    #[inline]
-    pub fn finished_data(&self) -> &[u8] {
-        self.assert_finished("finished_bytes cannot be called when the buffer is not yet finished");
-        &self.owned_buf[self.head..]
-    }
     /// Assert that a field is present in the just-finished Table.
     ///
     /// This is somewhat low-level and is mostly used by the generated code.
@@ -361,8 +400,8 @@ impl<'fbb> FlatBufferBuilder<'fbb> {
     /// internal state of the FlatBufferBuilder as `finished`. Afterwards,
     /// users can call `finished_data` to get the resulting data.
     #[inline]
-    pub fn finish_size_prefixed<T>(&mut self, root: WIPOffset<T>, file_identifier: Option<&str>) {
-        self.finish_with_opts(root, file_identifier, true);
+    pub fn finish_size_prefixed<T>(self, root: WIPOffset<T>, file_identifier: Option<&str>) -> FlatBuffer {
+        self.finish_with_opts(root, file_identifier, true)
     }
 
     /// Finalize the FlatBuffer by: aligning it, pushing an optional file
@@ -370,16 +409,16 @@ impl<'fbb> FlatBufferBuilder<'fbb> {
     /// FlatBufferBuilder as `finished`. Afterwards, users can call
     /// `finished_data` to get the resulting data.
     #[inline]
-    pub fn finish<T>(&mut self, root: WIPOffset<T>, file_identifier: Option<&str>) {
-        self.finish_with_opts(root, file_identifier, false);
+    pub fn finish<T>(self, root: WIPOffset<T>, file_identifier: Option<&str>) -> FlatBuffer {
+        self.finish_with_opts(root, file_identifier, false)
     }
 
     /// Finalize the FlatBuffer by: aligning it and marking the internal state
     /// of the FlatBufferBuilder as `finished`. Afterwards, users can call
     /// `finished_data` to get the resulting data.
     #[inline]
-    pub fn finish_minimal<T>(&mut self, root: WIPOffset<T>) {
-        self.finish_with_opts(root, None, false);
+    pub fn finish_minimal<T>(self, root: WIPOffset<T>) -> FlatBuffer {
+        self.finish_with_opts(root, None, false)
     }
 
     #[inline]
@@ -549,6 +588,7 @@ impl<'fbb> FlatBufferBuilder<'fbb> {
             right.copy_from_slice(left);
         }
         // finally, zero out the old end data.
+        // TODO(cneo) Why not `unsafe { write_bytes(left, 0, middle); }`?
         {
             let ptr = (&mut self.owned_buf[..middle]).as_mut_ptr();
             unsafe {
@@ -560,12 +600,11 @@ impl<'fbb> FlatBufferBuilder<'fbb> {
     // with or without a size prefix changes how we load the data, so finish*
     // functions are split along those lines.
     fn finish_with_opts<T>(
-        &mut self,
+        mut self,
         root: WIPOffset<T>,
         file_identifier: Option<&str>,
         size_prefixed: bool,
-    ) {
-        self.assert_not_finished("buffer cannot be finished when it is already finished");
+    ) -> FlatBuffer {
         self.assert_not_nested(
             "buffer cannot be finished when a table or vector is under construction",
         );
@@ -601,7 +640,12 @@ impl<'fbb> FlatBufferBuilder<'fbb> {
             let sz = self.used_space() as UOffsetT;
             self.push::<UOffsetT>(sz);
         }
-        self.finished = true;
+        FlatBuffer {
+            owned_buf: self.owned_buf,
+            head: self.head,
+            field_locs: self.field_locs,
+            written_vtable_revpos: self.written_vtable_revpos,
+        }
     }
 
     #[inline]
@@ -665,14 +709,6 @@ impl<'fbb> FlatBufferBuilder<'fbb> {
     #[inline]
     fn assert_not_nested(&self, msg: &'static str) {
         debug_assert!(!self.nested, msg);
-    }
-    #[inline]
-    fn assert_finished(&self, msg: &'static str) {
-        debug_assert!(self.finished, msg);
-    }
-    #[inline]
-    fn assert_not_finished(&self, msg: &'static str) {
-        debug_assert!(!self.finished, msg);
     }
 }
 

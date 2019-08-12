@@ -1540,25 +1540,27 @@ class RustGenerator : public BaseGenerator {
     code_.SetValue("OFFSET_TYPELABEL", Name(struct_def) + "Offset");
     code_ += "#[inline]";
     code_ += "pub fn finish_{{STRUCT_NAME_SNAKECASE}}_buffer<'a, 'b>(";
-    code_ += "    fbb: &'b mut flatbuffers::FlatBufferBuilder<'a>,";
-    code_ += "    root: flatbuffers::WIPOffset<{{STRUCT_NAME}}<'a>>) {";
+    code_ += "    fbb: flatbuffers::FlatBufferBuilder<'a>,";
+    code_ += "    root: flatbuffers::WIPOffset<{{STRUCT_NAME}}<'a>>";
+    code_ += "    ) -> flatbuffers::FlatBuffer {";
     if (parser_.file_identifier_.length()) {
-      code_ += "  fbb.finish(root, Some({{STRUCT_NAME_CAPS}}_IDENTIFIER));";
+      code_ += "  fbb.finish(root, Some({{STRUCT_NAME_CAPS}}_IDENTIFIER))";
     } else {
-      code_ += "  fbb.finish(root, None);";
+      code_ += "  fbb.finish(root, None)";
     }
     code_ += "}";
     code_ += "";
     code_ += "#[inline]";
     code_ += "pub fn finish_size_prefixed_{{STRUCT_NAME_SNAKECASE}}_buffer"
-             "<'a, 'b>("
-             "fbb: &'b mut flatbuffers::FlatBufferBuilder<'a>, "
-             "root: flatbuffers::WIPOffset<{{STRUCT_NAME}}<'a>>) {";
+             "<'a, 'b>(";
+    code_ += "    fbb: flatbuffers::FlatBufferBuilder<'a>,";
+    code_ += "    root: flatbuffers::WIPOffset<{{STRUCT_NAME}}<'a>>";
+    code_ += "    ) -> flatbuffers::FlatBuffer {";
     if (parser_.file_identifier_.length()) {
       code_ += "  fbb.finish_size_prefixed(root, "
-               "Some({{STRUCT_NAME_CAPS}}_IDENTIFIER));";
+               "Some({{STRUCT_NAME_CAPS}}_IDENTIFIER))";
     } else {
-      code_ += "  fbb.finish_size_prefixed(root, None);";
+      code_ += "  fbb.finish_size_prefixed(root, None)";
     }
     code_ += "}";
   }

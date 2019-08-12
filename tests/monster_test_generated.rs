@@ -1894,14 +1894,18 @@ pub const MONSTER_EXTENSION: &'static str = "mon";
 
 #[inline]
 pub fn finish_monster_buffer<'a, 'b>(
-    fbb: &'b mut flatbuffers::FlatBufferBuilder<'a>,
-    root: flatbuffers::WIPOffset<Monster<'a>>) {
-  fbb.finish(root, Some(MONSTER_IDENTIFIER));
+    fbb: flatbuffers::FlatBufferBuilder<'a>,
+    root: flatbuffers::WIPOffset<Monster<'a>>
+    ) -> flatbuffers::FlatBuffer {
+  fbb.finish(root, Some(MONSTER_IDENTIFIER))
 }
 
 #[inline]
-pub fn finish_size_prefixed_monster_buffer<'a, 'b>(fbb: &'b mut flatbuffers::FlatBufferBuilder<'a>, root: flatbuffers::WIPOffset<Monster<'a>>) {
-  fbb.finish_size_prefixed(root, Some(MONSTER_IDENTIFIER));
+pub fn finish_size_prefixed_monster_buffer<'a, 'b>(
+    fbb: flatbuffers::FlatBufferBuilder<'a>,
+    root: flatbuffers::WIPOffset<Monster<'a>>
+    ) -> flatbuffers::FlatBuffer {
+  fbb.finish_size_prefixed(root, Some(MONSTER_IDENTIFIER))
 }
 }  // pub mod Example
 }  // pub mod MyGame
