@@ -37,6 +37,26 @@ struct FieldLoc {
     id: VOffsetT,
 }
 
+/*
+
+    FlatBufferBuilder can be mutably referenced by a TableBuilder or (finished)
+    Flatbuffer. This way, the builder can only in one of "WIP", "nested WIP",
+    "finished" states. Dropping the TableBuilder
+
+*/
+pub struct FlatBuffer<'fbb, 'b: 'fbb> {
+    builder: &'b mut FlatBufferBuilder<'fbb>
+}
+impl<'fbb, 'b: 'fbb> Drop for FlatBuffer<'b, 'fbb> {
+    fn drop(&mut self) {
+        self.builder.reset()
+    }
+}
+// impl<'fbb, 'b:'fbb> FlatBuffer<'b> {
+//
+// }
+
+
 /// FlatBufferBuilder builds a FlatBuffer through manipulating its internal
 /// state. It has an owned `Vec<u8>` that grows as needed (up to the hardcoded
 /// limit of 2GiB, which is set by the FlatBuffers format).
@@ -360,26 +380,26 @@ impl<'fbb> FlatBufferBuilder<'fbb> {
     /// identifier on to it, pushing a size prefix on to it, and marking the
     /// internal state of the FlatBufferBuilder as `finished`. Afterwards,
     /// users can call `finished_data` to get the resulting data.
-    #[inline]
-    pub fn finish_size_prefixed<T>(&mut self, root: WIPOffset<T>, file_identifier: Option<&str>) {
-        self.finish_with_opts(root, file_identifier, true);
+    // #[inline]
+    pub fn finish_size_prefixed<'builder: 'fbb, T>(&'builder mut self, root: WIPOffset<T>, file_identifier: Option<&str>) -> FlatBuffer<'builder, 'fbb> {
+        self.finish_with_opts(root, file_identifier, true)
     }
 
     /// Finalize the FlatBuffer by: aligning it, pushing an optional file
     /// identifier on to it, and marking the internal state of the
     /// FlatBufferBuilder as `finished`. Afterwards, users can call
     /// `finished_data` to get the resulting data.
-    #[inline]
-    pub fn finish<T>(&mut self, root: WIPOffset<T>, file_identifier: Option<&str>) {
-        self.finish_with_opts(root, file_identifier, false);
+    // #[inline]
+    pub fn finish<'builder: 'fbb, T>(&'builder mut self, root: WIPOffset<T>, file_identifier: Option<&str>) -> FlatBuffer<'builder, 'fbb>  {
+        self.finish_with_opts(root, file_identifier, false)
     }
 
     /// Finalize the FlatBuffer by: aligning it and marking the internal state
     /// of the FlatBufferBuilder as `finished`. Afterwards, users can call
     /// `finished_data` to get the resulting data.
     #[inline]
-    pub fn finish_minimal<T>(&mut self, root: WIPOffset<T>) {
-        self.finish_with_opts(root, None, false);
+    pub fn finish_minimal<'builder: 'fbb, T>(&'builder mut self, root: WIPOffset<T>) -> FlatBuffer<'builder, 'fbb> {
+        self.finish_with_opts(root, None, false)
     }
 
     #[inline]
@@ -559,13 +579,12 @@ impl<'fbb> FlatBufferBuilder<'fbb> {
 
     // with or without a size prefix changes how we load the data, so finish*
     // functions are split along those lines.
-    fn finish_with_opts<T>(
-        &mut self,
+    fn finish_with_opts<'b:'fbb, T>(
+        &'b mut self,
         root: WIPOffset<T>,
         file_identifier: Option<&str>,
         size_prefixed: bool,
-    ) {
-        self.assert_not_finished("buffer cannot be finished when it is already finished");
+    ) -> FlatBuffer<'b, 'fbb> {
         self.assert_not_nested(
             "buffer cannot be finished when a table or vector is under construction",
         );
@@ -601,7 +620,7 @@ impl<'fbb> FlatBufferBuilder<'fbb> {
             let sz = self.used_space() as UOffsetT;
             self.push::<UOffsetT>(sz);
         }
-        self.finished = true;
+        FlatBuffer{builder: self}
     }
 
     #[inline]
