@@ -40,25 +40,16 @@ fn traverse_canonical_buffer(bench: &mut Bencher) {
 }
 
 fn create_canonical_buffer_then_reset(bench: &mut Bencher) {
-
-    struct Foo<'a>(flatbuffers::FlatBufferBuilder<'a>, u64);
-    impl <'a>Foo<'a> {
-        fn t(&mut self) {
-            let n;
-            self.0 = {
-                let fb = create_serialized_example_with_generated_code(self.0);
-                n = fb.finished_data().len() as u64;
-                fb.reset()
-            };
-            self.1 = n;
-        }
-    }
-    let mut foo = Foo(flatbuffers::FlatBufferBuilder::new(), 0);
-    foo.t();
-    let n = foo.1;
-
-    bench.iter(||{foo.t()});
-
+    // Use an option so you can take and replace from a reference.
+    let mut fbb = Some(flatbuffers::FlatBufferBuilder::new());
+    let mut n = 0;
+    let mut iter = || {
+        let fb = create_serialized_example_with_generated_code(fbb.take().unwrap());
+        n = fb.finished_data().len() as u64;
+        fbb.replace(fb.reset());
+    };
+    iter();
+    bench.iter(iter);
     bench.bytes = n;
 }
 

@@ -79,10 +79,9 @@ impl<'fbb> FlatBuffer {
                 write_bytes(ptr, 0, to_clear);
             }
         }
-        let FlatBuffer { owned_buf, mut head, field_locs, mut written_vtable_revpos } = self;
-        head = owned_buf.len();
+        let FlatBuffer { owned_buf, head: _, field_locs, mut written_vtable_revpos } = self;
         written_vtable_revpos.clear();
-        head = owned_buf.len();
+        let head = owned_buf.len();
         FlatBufferBuilder {
             owned_buf,
             head,
