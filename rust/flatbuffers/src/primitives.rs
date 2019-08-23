@@ -60,6 +60,7 @@ pub type UOffsetT = u32;
 pub type VOffsetT = i16;
 
 /// TableFinishedWIPOffset marks a WIPOffset as being for a finished table.
+#[derive(Clone, Copy)]
 pub struct TableFinishedWIPOffset {}
 
 /// TableUnfinishedWIPOffset marks a WIPOffset as being for an unfinished table.
@@ -67,27 +68,20 @@ pub struct TableFinishedWIPOffset {}
 pub struct TableUnfinishedWIPOffset {}
 
 /// UnionWIPOffset marks a WIPOffset as being for a union value.
+#[derive(Clone, Copy)]
 pub struct UnionWIPOffset {}
 
 /// VTableWIPOffset marks a WIPOffset as being for a vtable.
+#[derive(Clone, Copy)]
 pub struct VTableWIPOffset {}
 
 /// WIPOffset contains an UOffsetT with a special meaning: it is the location of
 /// data relative to the *end* of an in-progress FlatBuffer. The
 /// FlatBufferBuilder uses this to track the location of objects in an absolute
 /// way. The impl of Push converts a WIPOffset into a ForwardsUOffset.
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct WIPOffset<T>(UOffsetT, PhantomData<T>);
 
-// TODO(rw): why do we need to reimplement (with a default impl) Copy to
-//           avoid ownership errors?
-impl<T> Copy for WIPOffset<T> {}
-impl<T> Clone for WIPOffset<T> {
-    #[inline]
-    fn clone(&self) -> WIPOffset<T> {
-        WIPOffset::new(self.0.clone())
-    }
-}
 impl<T> PartialEq for WIPOffset<T> {
     fn eq(&self, o: &WIPOffset<T>) -> bool {
         self.value() == o.value()
@@ -145,7 +139,7 @@ impl<T> Push for ForwardsUOffset<T> {
 
 /// ForwardsUOffset is used by Follow to traverse a FlatBuffer: the pointer
 /// is incremented by the value contained in this type.
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct ForwardsUOffset<T>(UOffsetT, PhantomData<T>);
 impl<T> ForwardsUOffset<T> {
     #[inline(always)]
@@ -166,7 +160,7 @@ impl<'a, T: Follow<'a>> Follow<'a> for ForwardsUOffset<T> {
 
 /// ForwardsVOffset is used by Follow to traverse a FlatBuffer: the pointer
 /// is incremented by the value contained in this type.
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct ForwardsVOffset<T>(VOffsetT, PhantomData<T>);
 impl<T> ForwardsVOffset<T> {
     #[inline(always)]
@@ -196,7 +190,7 @@ impl<T> Push for ForwardsVOffset<T> {
 
 /// ForwardsSOffset is used by Follow to traverse a FlatBuffer: the pointer
 /// is incremented by the *negative* of the value contained in this type.
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct BackwardsSOffset<T>(SOffsetT, PhantomData<T>);
 impl<T> BackwardsSOffset<T> {
     #[inline(always)]

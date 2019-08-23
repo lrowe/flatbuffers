@@ -21,6 +21,14 @@ if [[ "$1" == "mips-unknown-linux-gnu" ]]; then
     export CARGO_TARGET_MIPS_UNKNOWN_LINUX_GNU_RUNNER="qemu-mips -L /usr/mips-linux-gnu"
 fi
 
+
+# REMOVE
+cd ..
+make
+cd tests
+../flatc --rust monster_test.fbs
+# REMOVE
+
 cd ./rust_usage_test
 cargo test $TARGET_FLAG -- --quiet
 TEST_RESULT=$?

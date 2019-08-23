@@ -61,22 +61,18 @@ impl<'a> Default for InParentNamespaceArgs {
     }
 }
 pub struct InParentNamespaceBuilder<'a: 'b, 'b> {
-  fbb_: &'b mut flatbuffers::FlatBufferBuilder<'a>,
-  start_: flatbuffers::WIPOffset<flatbuffers::TableUnfinishedWIPOffset>,
+  table_builder: flatbuffers::TableBuilder<'a, 'b>,
 }
 impl<'a: 'b, 'b> InParentNamespaceBuilder<'a, 'b> {
   #[inline]
   pub fn new(_fbb: &'b mut flatbuffers::FlatBufferBuilder<'a>) -> InParentNamespaceBuilder<'a, 'b> {
-    let start = _fbb.start_table();
-    InParentNamespaceBuilder {
-      fbb_: _fbb,
-      start_: start,
-    }
+    let table_builder = _fbb.start_table();
+    InParentNamespaceBuilder { table_builder }
   }
   #[inline]
   pub fn finish(self) -> flatbuffers::WIPOffset<InParentNamespace<'a>> {
-    let o = self.fbb_.end_table(self.start_);
-    flatbuffers::WIPOffset::new(o.value())
+    let t = self.table_builder.end_table();
+    flatbuffers::WIPOffset::new(t.value())
   }
 }
 
@@ -133,22 +129,18 @@ impl<'a> Default for MonsterArgs {
     }
 }
 pub struct MonsterBuilder<'a: 'b, 'b> {
-  fbb_: &'b mut flatbuffers::FlatBufferBuilder<'a>,
-  start_: flatbuffers::WIPOffset<flatbuffers::TableUnfinishedWIPOffset>,
+  table_builder: flatbuffers::TableBuilder<'a, 'b>,
 }
 impl<'a: 'b, 'b> MonsterBuilder<'a, 'b> {
   #[inline]
   pub fn new(_fbb: &'b mut flatbuffers::FlatBufferBuilder<'a>) -> MonsterBuilder<'a, 'b> {
-    let start = _fbb.start_table();
-    MonsterBuilder {
-      fbb_: _fbb,
-      start_: start,
-    }
+    let table_builder = _fbb.start_table();
+    MonsterBuilder { table_builder }
   }
   #[inline]
   pub fn finish(self) -> flatbuffers::WIPOffset<Monster<'a>> {
-    let o = self.fbb_.end_table(self.start_);
-    flatbuffers::WIPOffset::new(o.value())
+    let t = self.table_builder.end_table();
+    flatbuffers::WIPOffset::new(t.value())
   }
 }
 
@@ -710,26 +702,22 @@ impl<'a> Default for TestSimpleTableWithEnumArgs {
     }
 }
 pub struct TestSimpleTableWithEnumBuilder<'a: 'b, 'b> {
-  fbb_: &'b mut flatbuffers::FlatBufferBuilder<'a>,
-  start_: flatbuffers::WIPOffset<flatbuffers::TableUnfinishedWIPOffset>,
+  table_builder: flatbuffers::TableBuilder<'a, 'b>,
 }
 impl<'a: 'b, 'b> TestSimpleTableWithEnumBuilder<'a, 'b> {
   #[inline]
   pub fn add_color(&mut self, color: Color) {
-    self.fbb_.push_slot::<Color>(TestSimpleTableWithEnum::VT_COLOR, color, Color::Green);
+    self.table_builder.push_slot::<Color>(TestSimpleTableWithEnum::VT_COLOR, color, Color::Green);
   }
   #[inline]
   pub fn new(_fbb: &'b mut flatbuffers::FlatBufferBuilder<'a>) -> TestSimpleTableWithEnumBuilder<'a, 'b> {
-    let start = _fbb.start_table();
-    TestSimpleTableWithEnumBuilder {
-      fbb_: _fbb,
-      start_: start,
-    }
+    let table_builder = _fbb.start_table();
+    TestSimpleTableWithEnumBuilder { table_builder }
   }
   #[inline]
   pub fn finish(self) -> flatbuffers::WIPOffset<TestSimpleTableWithEnum<'a>> {
-    let o = self.fbb_.end_table(self.start_);
-    flatbuffers::WIPOffset::new(o.value())
+    let t = self.table_builder.end_table();
+    flatbuffers::WIPOffset::new(t.value())
   }
 }
 
@@ -802,34 +790,30 @@ impl<'a> Default for StatArgs<'a> {
     }
 }
 pub struct StatBuilder<'a: 'b, 'b> {
-  fbb_: &'b mut flatbuffers::FlatBufferBuilder<'a>,
-  start_: flatbuffers::WIPOffset<flatbuffers::TableUnfinishedWIPOffset>,
+  table_builder: flatbuffers::TableBuilder<'a, 'b>,
 }
 impl<'a: 'b, 'b> StatBuilder<'a, 'b> {
   #[inline]
   pub fn add_id(&mut self, id: flatbuffers::WIPOffset<&'b  str>) {
-    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(Stat::VT_ID, id);
+    self.table_builder.push_slot_always::<flatbuffers::WIPOffset<_>>(Stat::VT_ID, id);
   }
   #[inline]
   pub fn add_val(&mut self, val: i64) {
-    self.fbb_.push_slot::<i64>(Stat::VT_VAL, val, 0);
+    self.table_builder.push_slot::<i64>(Stat::VT_VAL, val, 0);
   }
   #[inline]
   pub fn add_count(&mut self, count: u16) {
-    self.fbb_.push_slot::<u16>(Stat::VT_COUNT, count, 0);
+    self.table_builder.push_slot::<u16>(Stat::VT_COUNT, count, 0);
   }
   #[inline]
   pub fn new(_fbb: &'b mut flatbuffers::FlatBufferBuilder<'a>) -> StatBuilder<'a, 'b> {
-    let start = _fbb.start_table();
-    StatBuilder {
-      fbb_: _fbb,
-      start_: start,
-    }
+    let table_builder = _fbb.start_table();
+    StatBuilder { table_builder }
   }
   #[inline]
   pub fn finish(self) -> flatbuffers::WIPOffset<Stat<'a>> {
-    let o = self.fbb_.end_table(self.start_);
-    flatbuffers::WIPOffset::new(o.value())
+    let t = self.table_builder.end_table();
+    flatbuffers::WIPOffset::new(t.value())
   }
 }
 
@@ -896,26 +880,22 @@ impl<'a> Default for ReferrableArgs {
     }
 }
 pub struct ReferrableBuilder<'a: 'b, 'b> {
-  fbb_: &'b mut flatbuffers::FlatBufferBuilder<'a>,
-  start_: flatbuffers::WIPOffset<flatbuffers::TableUnfinishedWIPOffset>,
+  table_builder: flatbuffers::TableBuilder<'a, 'b>,
 }
 impl<'a: 'b, 'b> ReferrableBuilder<'a, 'b> {
   #[inline]
   pub fn add_id(&mut self, id: u64) {
-    self.fbb_.push_slot::<u64>(Referrable::VT_ID, id, 0);
+    self.table_builder.push_slot::<u64>(Referrable::VT_ID, id, 0);
   }
   #[inline]
   pub fn new(_fbb: &'b mut flatbuffers::FlatBufferBuilder<'a>) -> ReferrableBuilder<'a, 'b> {
-    let start = _fbb.start_table();
-    ReferrableBuilder {
-      fbb_: _fbb,
-      start_: start,
-    }
+    let table_builder = _fbb.start_table();
+    ReferrableBuilder { table_builder }
   }
   #[inline]
   pub fn finish(self) -> flatbuffers::WIPOffset<Referrable<'a>> {
-    let o = self.fbb_.end_table(self.start_);
-    flatbuffers::WIPOffset::new(o.value())
+    let t = self.table_builder.end_table();
+    flatbuffers::WIPOffset::new(t.value())
   }
 }
 
@@ -1452,211 +1432,209 @@ impl<'a> Default for MonsterArgs<'a> {
     }
 }
 pub struct MonsterBuilder<'a: 'b, 'b> {
-  fbb_: &'b mut flatbuffers::FlatBufferBuilder<'a>,
-  start_: flatbuffers::WIPOffset<flatbuffers::TableUnfinishedWIPOffset>,
+  table_builder: flatbuffers::TableBuilder<'a, 'b>,
 }
 impl<'a: 'b, 'b> MonsterBuilder<'a, 'b> {
   #[inline]
   pub fn add_pos(&mut self, pos: &'b  Vec3) {
-    self.fbb_.push_slot_always::<&Vec3>(Monster::VT_POS, pos);
+    self.table_builder.push_slot_always::<&Vec3>(Monster::VT_POS, pos);
   }
   #[inline]
   pub fn add_mana(&mut self, mana: i16) {
-    self.fbb_.push_slot::<i16>(Monster::VT_MANA, mana, 150);
+    self.table_builder.push_slot::<i16>(Monster::VT_MANA, mana, 150);
   }
   #[inline]
   pub fn add_hp(&mut self, hp: i16) {
-    self.fbb_.push_slot::<i16>(Monster::VT_HP, hp, 100);
+    self.table_builder.push_slot::<i16>(Monster::VT_HP, hp, 100);
   }
   #[inline]
   pub fn add_name(&mut self, name: flatbuffers::WIPOffset<&'b  str>) {
-    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(Monster::VT_NAME, name);
+    self.table_builder.push_slot_always::<flatbuffers::WIPOffset<_>>(Monster::VT_NAME, name);
   }
   #[inline]
   pub fn add_inventory(&mut self, inventory: flatbuffers::WIPOffset<flatbuffers::Vector<'b , u8>>) {
-    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(Monster::VT_INVENTORY, inventory);
+    self.table_builder.push_slot_always::<flatbuffers::WIPOffset<_>>(Monster::VT_INVENTORY, inventory);
   }
   #[inline]
   pub fn add_color(&mut self, color: Color) {
-    self.fbb_.push_slot::<Color>(Monster::VT_COLOR, color, Color::Blue);
+    self.table_builder.push_slot::<Color>(Monster::VT_COLOR, color, Color::Blue);
   }
   #[inline]
   pub fn add_test_type(&mut self, test_type: Any) {
-    self.fbb_.push_slot::<Any>(Monster::VT_TEST_TYPE, test_type, Any::NONE);
+    self.table_builder.push_slot::<Any>(Monster::VT_TEST_TYPE, test_type, Any::NONE);
   }
   #[inline]
   pub fn add_test(&mut self, test: flatbuffers::WIPOffset<flatbuffers::UnionWIPOffset>) {
-    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(Monster::VT_TEST, test);
+    self.table_builder.push_slot_always::<flatbuffers::WIPOffset<_>>(Monster::VT_TEST, test);
   }
   #[inline]
   pub fn add_test4(&mut self, test4: flatbuffers::WIPOffset<flatbuffers::Vector<'b , Test>>) {
-    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(Monster::VT_TEST4, test4);
+    self.table_builder.push_slot_always::<flatbuffers::WIPOffset<_>>(Monster::VT_TEST4, test4);
   }
   #[inline]
   pub fn add_testarrayofstring(&mut self, testarrayofstring: flatbuffers::WIPOffset<flatbuffers::Vector<'b , flatbuffers::ForwardsUOffset<&'b  str>>>) {
-    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(Monster::VT_TESTARRAYOFSTRING, testarrayofstring);
+    self.table_builder.push_slot_always::<flatbuffers::WIPOffset<_>>(Monster::VT_TESTARRAYOFSTRING, testarrayofstring);
   }
   #[inline]
   pub fn add_testarrayoftables(&mut self, testarrayoftables: flatbuffers::WIPOffset<flatbuffers::Vector<'b , flatbuffers::ForwardsUOffset<Monster<'b >>>>) {
-    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(Monster::VT_TESTARRAYOFTABLES, testarrayoftables);
+    self.table_builder.push_slot_always::<flatbuffers::WIPOffset<_>>(Monster::VT_TESTARRAYOFTABLES, testarrayoftables);
   }
   #[inline]
   pub fn add_enemy(&mut self, enemy: flatbuffers::WIPOffset<Monster<'b >>) {
-    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<Monster>>(Monster::VT_ENEMY, enemy);
+    self.table_builder.push_slot_always::<flatbuffers::WIPOffset<Monster>>(Monster::VT_ENEMY, enemy);
   }
   #[inline]
   pub fn add_testnestedflatbuffer(&mut self, testnestedflatbuffer: flatbuffers::WIPOffset<flatbuffers::Vector<'b , u8>>) {
-    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(Monster::VT_TESTNESTEDFLATBUFFER, testnestedflatbuffer);
+    self.table_builder.push_slot_always::<flatbuffers::WIPOffset<_>>(Monster::VT_TESTNESTEDFLATBUFFER, testnestedflatbuffer);
   }
   #[inline]
   pub fn add_testempty(&mut self, testempty: flatbuffers::WIPOffset<Stat<'b >>) {
-    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<Stat>>(Monster::VT_TESTEMPTY, testempty);
+    self.table_builder.push_slot_always::<flatbuffers::WIPOffset<Stat>>(Monster::VT_TESTEMPTY, testempty);
   }
   #[inline]
   pub fn add_testbool(&mut self, testbool: bool) {
-    self.fbb_.push_slot::<bool>(Monster::VT_TESTBOOL, testbool, false);
+    self.table_builder.push_slot::<bool>(Monster::VT_TESTBOOL, testbool, false);
   }
   #[inline]
   pub fn add_testhashs32_fnv1(&mut self, testhashs32_fnv1: i32) {
-    self.fbb_.push_slot::<i32>(Monster::VT_TESTHASHS32_FNV1, testhashs32_fnv1, 0);
+    self.table_builder.push_slot::<i32>(Monster::VT_TESTHASHS32_FNV1, testhashs32_fnv1, 0);
   }
   #[inline]
   pub fn add_testhashu32_fnv1(&mut self, testhashu32_fnv1: u32) {
-    self.fbb_.push_slot::<u32>(Monster::VT_TESTHASHU32_FNV1, testhashu32_fnv1, 0);
+    self.table_builder.push_slot::<u32>(Monster::VT_TESTHASHU32_FNV1, testhashu32_fnv1, 0);
   }
   #[inline]
   pub fn add_testhashs64_fnv1(&mut self, testhashs64_fnv1: i64) {
-    self.fbb_.push_slot::<i64>(Monster::VT_TESTHASHS64_FNV1, testhashs64_fnv1, 0);
+    self.table_builder.push_slot::<i64>(Monster::VT_TESTHASHS64_FNV1, testhashs64_fnv1, 0);
   }
   #[inline]
   pub fn add_testhashu64_fnv1(&mut self, testhashu64_fnv1: u64) {
-    self.fbb_.push_slot::<u64>(Monster::VT_TESTHASHU64_FNV1, testhashu64_fnv1, 0);
+    self.table_builder.push_slot::<u64>(Monster::VT_TESTHASHU64_FNV1, testhashu64_fnv1, 0);
   }
   #[inline]
   pub fn add_testhashs32_fnv1a(&mut self, testhashs32_fnv1a: i32) {
-    self.fbb_.push_slot::<i32>(Monster::VT_TESTHASHS32_FNV1A, testhashs32_fnv1a, 0);
+    self.table_builder.push_slot::<i32>(Monster::VT_TESTHASHS32_FNV1A, testhashs32_fnv1a, 0);
   }
   #[inline]
   pub fn add_testhashu32_fnv1a(&mut self, testhashu32_fnv1a: u32) {
-    self.fbb_.push_slot::<u32>(Monster::VT_TESTHASHU32_FNV1A, testhashu32_fnv1a, 0);
+    self.table_builder.push_slot::<u32>(Monster::VT_TESTHASHU32_FNV1A, testhashu32_fnv1a, 0);
   }
   #[inline]
   pub fn add_testhashs64_fnv1a(&mut self, testhashs64_fnv1a: i64) {
-    self.fbb_.push_slot::<i64>(Monster::VT_TESTHASHS64_FNV1A, testhashs64_fnv1a, 0);
+    self.table_builder.push_slot::<i64>(Monster::VT_TESTHASHS64_FNV1A, testhashs64_fnv1a, 0);
   }
   #[inline]
   pub fn add_testhashu64_fnv1a(&mut self, testhashu64_fnv1a: u64) {
-    self.fbb_.push_slot::<u64>(Monster::VT_TESTHASHU64_FNV1A, testhashu64_fnv1a, 0);
+    self.table_builder.push_slot::<u64>(Monster::VT_TESTHASHU64_FNV1A, testhashu64_fnv1a, 0);
   }
   #[inline]
   pub fn add_testarrayofbools(&mut self, testarrayofbools: flatbuffers::WIPOffset<flatbuffers::Vector<'b , bool>>) {
-    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(Monster::VT_TESTARRAYOFBOOLS, testarrayofbools);
+    self.table_builder.push_slot_always::<flatbuffers::WIPOffset<_>>(Monster::VT_TESTARRAYOFBOOLS, testarrayofbools);
   }
   #[inline]
   pub fn add_testf(&mut self, testf: f32) {
-    self.fbb_.push_slot::<f32>(Monster::VT_TESTF, testf, 3.14159);
+    self.table_builder.push_slot::<f32>(Monster::VT_TESTF, testf, 3.14159);
   }
   #[inline]
   pub fn add_testf2(&mut self, testf2: f32) {
-    self.fbb_.push_slot::<f32>(Monster::VT_TESTF2, testf2, 3.0);
+    self.table_builder.push_slot::<f32>(Monster::VT_TESTF2, testf2, 3.0);
   }
   #[inline]
   pub fn add_testf3(&mut self, testf3: f32) {
-    self.fbb_.push_slot::<f32>(Monster::VT_TESTF3, testf3, 0.0);
+    self.table_builder.push_slot::<f32>(Monster::VT_TESTF3, testf3, 0.0);
   }
   #[inline]
   pub fn add_testarrayofstring2(&mut self, testarrayofstring2: flatbuffers::WIPOffset<flatbuffers::Vector<'b , flatbuffers::ForwardsUOffset<&'b  str>>>) {
-    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(Monster::VT_TESTARRAYOFSTRING2, testarrayofstring2);
+    self.table_builder.push_slot_always::<flatbuffers::WIPOffset<_>>(Monster::VT_TESTARRAYOFSTRING2, testarrayofstring2);
   }
   #[inline]
   pub fn add_testarrayofsortedstruct(&mut self, testarrayofsortedstruct: flatbuffers::WIPOffset<flatbuffers::Vector<'b , Ability>>) {
-    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(Monster::VT_TESTARRAYOFSORTEDSTRUCT, testarrayofsortedstruct);
+    self.table_builder.push_slot_always::<flatbuffers::WIPOffset<_>>(Monster::VT_TESTARRAYOFSORTEDSTRUCT, testarrayofsortedstruct);
   }
   #[inline]
   pub fn add_flex(&mut self, flex: flatbuffers::WIPOffset<flatbuffers::Vector<'b , u8>>) {
-    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(Monster::VT_FLEX, flex);
+    self.table_builder.push_slot_always::<flatbuffers::WIPOffset<_>>(Monster::VT_FLEX, flex);
   }
   #[inline]
   pub fn add_test5(&mut self, test5: flatbuffers::WIPOffset<flatbuffers::Vector<'b , Test>>) {
-    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(Monster::VT_TEST5, test5);
+    self.table_builder.push_slot_always::<flatbuffers::WIPOffset<_>>(Monster::VT_TEST5, test5);
   }
   #[inline]
   pub fn add_vector_of_longs(&mut self, vector_of_longs: flatbuffers::WIPOffset<flatbuffers::Vector<'b , i64>>) {
-    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(Monster::VT_VECTOR_OF_LONGS, vector_of_longs);
+    self.table_builder.push_slot_always::<flatbuffers::WIPOffset<_>>(Monster::VT_VECTOR_OF_LONGS, vector_of_longs);
   }
   #[inline]
   pub fn add_vector_of_doubles(&mut self, vector_of_doubles: flatbuffers::WIPOffset<flatbuffers::Vector<'b , f64>>) {
-    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(Monster::VT_VECTOR_OF_DOUBLES, vector_of_doubles);
+    self.table_builder.push_slot_always::<flatbuffers::WIPOffset<_>>(Monster::VT_VECTOR_OF_DOUBLES, vector_of_doubles);
   }
   #[inline]
   pub fn add_parent_namespace_test(&mut self, parent_namespace_test: flatbuffers::WIPOffset<super::InParentNamespace<'b >>) {
-    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<super::InParentNamespace>>(Monster::VT_PARENT_NAMESPACE_TEST, parent_namespace_test);
+    self.table_builder.push_slot_always::<flatbuffers::WIPOffset<super::InParentNamespace>>(Monster::VT_PARENT_NAMESPACE_TEST, parent_namespace_test);
   }
   #[inline]
   pub fn add_vector_of_referrables(&mut self, vector_of_referrables: flatbuffers::WIPOffset<flatbuffers::Vector<'b , flatbuffers::ForwardsUOffset<Referrable<'b >>>>) {
-    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(Monster::VT_VECTOR_OF_REFERRABLES, vector_of_referrables);
+    self.table_builder.push_slot_always::<flatbuffers::WIPOffset<_>>(Monster::VT_VECTOR_OF_REFERRABLES, vector_of_referrables);
   }
   #[inline]
   pub fn add_single_weak_reference(&mut self, single_weak_reference: u64) {
-    self.fbb_.push_slot::<u64>(Monster::VT_SINGLE_WEAK_REFERENCE, single_weak_reference, 0);
+    self.table_builder.push_slot::<u64>(Monster::VT_SINGLE_WEAK_REFERENCE, single_weak_reference, 0);
   }
   #[inline]
   pub fn add_vector_of_weak_references(&mut self, vector_of_weak_references: flatbuffers::WIPOffset<flatbuffers::Vector<'b , u64>>) {
-    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(Monster::VT_VECTOR_OF_WEAK_REFERENCES, vector_of_weak_references);
+    self.table_builder.push_slot_always::<flatbuffers::WIPOffset<_>>(Monster::VT_VECTOR_OF_WEAK_REFERENCES, vector_of_weak_references);
   }
   #[inline]
   pub fn add_vector_of_strong_referrables(&mut self, vector_of_strong_referrables: flatbuffers::WIPOffset<flatbuffers::Vector<'b , flatbuffers::ForwardsUOffset<Referrable<'b >>>>) {
-    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(Monster::VT_VECTOR_OF_STRONG_REFERRABLES, vector_of_strong_referrables);
+    self.table_builder.push_slot_always::<flatbuffers::WIPOffset<_>>(Monster::VT_VECTOR_OF_STRONG_REFERRABLES, vector_of_strong_referrables);
   }
   #[inline]
   pub fn add_co_owning_reference(&mut self, co_owning_reference: u64) {
-    self.fbb_.push_slot::<u64>(Monster::VT_CO_OWNING_REFERENCE, co_owning_reference, 0);
+    self.table_builder.push_slot::<u64>(Monster::VT_CO_OWNING_REFERENCE, co_owning_reference, 0);
   }
   #[inline]
   pub fn add_vector_of_co_owning_references(&mut self, vector_of_co_owning_references: flatbuffers::WIPOffset<flatbuffers::Vector<'b , u64>>) {
-    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(Monster::VT_VECTOR_OF_CO_OWNING_REFERENCES, vector_of_co_owning_references);
+    self.table_builder.push_slot_always::<flatbuffers::WIPOffset<_>>(Monster::VT_VECTOR_OF_CO_OWNING_REFERENCES, vector_of_co_owning_references);
   }
   #[inline]
   pub fn add_non_owning_reference(&mut self, non_owning_reference: u64) {
-    self.fbb_.push_slot::<u64>(Monster::VT_NON_OWNING_REFERENCE, non_owning_reference, 0);
+    self.table_builder.push_slot::<u64>(Monster::VT_NON_OWNING_REFERENCE, non_owning_reference, 0);
   }
   #[inline]
   pub fn add_vector_of_non_owning_references(&mut self, vector_of_non_owning_references: flatbuffers::WIPOffset<flatbuffers::Vector<'b , u64>>) {
-    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(Monster::VT_VECTOR_OF_NON_OWNING_REFERENCES, vector_of_non_owning_references);
+    self.table_builder.push_slot_always::<flatbuffers::WIPOffset<_>>(Monster::VT_VECTOR_OF_NON_OWNING_REFERENCES, vector_of_non_owning_references);
   }
   #[inline]
   pub fn add_any_unique_type(&mut self, any_unique_type: AnyUniqueAliases) {
-    self.fbb_.push_slot::<AnyUniqueAliases>(Monster::VT_ANY_UNIQUE_TYPE, any_unique_type, AnyUniqueAliases::NONE);
+    self.table_builder.push_slot::<AnyUniqueAliases>(Monster::VT_ANY_UNIQUE_TYPE, any_unique_type, AnyUniqueAliases::NONE);
   }
   #[inline]
   pub fn add_any_unique(&mut self, any_unique: flatbuffers::WIPOffset<flatbuffers::UnionWIPOffset>) {
-    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(Monster::VT_ANY_UNIQUE, any_unique);
+    self.table_builder.push_slot_always::<flatbuffers::WIPOffset<_>>(Monster::VT_ANY_UNIQUE, any_unique);
   }
   #[inline]
   pub fn add_any_ambiguous_type(&mut self, any_ambiguous_type: AnyAmbiguousAliases) {
-    self.fbb_.push_slot::<AnyAmbiguousAliases>(Monster::VT_ANY_AMBIGUOUS_TYPE, any_ambiguous_type, AnyAmbiguousAliases::NONE);
+    self.table_builder.push_slot::<AnyAmbiguousAliases>(Monster::VT_ANY_AMBIGUOUS_TYPE, any_ambiguous_type, AnyAmbiguousAliases::NONE);
   }
   #[inline]
   pub fn add_any_ambiguous(&mut self, any_ambiguous: flatbuffers::WIPOffset<flatbuffers::UnionWIPOffset>) {
-    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(Monster::VT_ANY_AMBIGUOUS, any_ambiguous);
+    self.table_builder.push_slot_always::<flatbuffers::WIPOffset<_>>(Monster::VT_ANY_AMBIGUOUS, any_ambiguous);
   }
   #[inline]
   pub fn add_vector_of_enums(&mut self, vector_of_enums: flatbuffers::WIPOffset<flatbuffers::Vector<'b , Color>>) {
-    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(Monster::VT_VECTOR_OF_ENUMS, vector_of_enums);
+    self.table_builder.push_slot_always::<flatbuffers::WIPOffset<_>>(Monster::VT_VECTOR_OF_ENUMS, vector_of_enums);
   }
   #[inline]
   pub fn new(_fbb: &'b mut flatbuffers::FlatBufferBuilder<'a>) -> MonsterBuilder<'a, 'b> {
-    let start = _fbb.start_table();
-    MonsterBuilder {
-      fbb_: _fbb,
-      start_: start,
-    }
+    let table_builder = _fbb.start_table();
+    MonsterBuilder { table_builder }
   }
   #[inline]
   pub fn finish(self) -> flatbuffers::WIPOffset<Monster<'a>> {
-    let o = self.fbb_.end_table(self.start_);
-    self.fbb_.required(o, Monster::VT_NAME,"name");
-    flatbuffers::WIPOffset::new(o.value())
+    let required_fields = [
+      (Monster::VT_NAME,"name"),
+    ];
+    let t = self.table_builder.end_table_requiring(&required_fields);
+    flatbuffers::WIPOffset::new(t.value())
   }
 }
 
@@ -1801,70 +1779,66 @@ impl<'a> Default for TypeAliasesArgs<'a> {
     }
 }
 pub struct TypeAliasesBuilder<'a: 'b, 'b> {
-  fbb_: &'b mut flatbuffers::FlatBufferBuilder<'a>,
-  start_: flatbuffers::WIPOffset<flatbuffers::TableUnfinishedWIPOffset>,
+  table_builder: flatbuffers::TableBuilder<'a, 'b>,
 }
 impl<'a: 'b, 'b> TypeAliasesBuilder<'a, 'b> {
   #[inline]
   pub fn add_i8_(&mut self, i8_: i8) {
-    self.fbb_.push_slot::<i8>(TypeAliases::VT_I8_, i8_, 0);
+    self.table_builder.push_slot::<i8>(TypeAliases::VT_I8_, i8_, 0);
   }
   #[inline]
   pub fn add_u8_(&mut self, u8_: u8) {
-    self.fbb_.push_slot::<u8>(TypeAliases::VT_U8_, u8_, 0);
+    self.table_builder.push_slot::<u8>(TypeAliases::VT_U8_, u8_, 0);
   }
   #[inline]
   pub fn add_i16_(&mut self, i16_: i16) {
-    self.fbb_.push_slot::<i16>(TypeAliases::VT_I16_, i16_, 0);
+    self.table_builder.push_slot::<i16>(TypeAliases::VT_I16_, i16_, 0);
   }
   #[inline]
   pub fn add_u16_(&mut self, u16_: u16) {
-    self.fbb_.push_slot::<u16>(TypeAliases::VT_U16_, u16_, 0);
+    self.table_builder.push_slot::<u16>(TypeAliases::VT_U16_, u16_, 0);
   }
   #[inline]
   pub fn add_i32_(&mut self, i32_: i32) {
-    self.fbb_.push_slot::<i32>(TypeAliases::VT_I32_, i32_, 0);
+    self.table_builder.push_slot::<i32>(TypeAliases::VT_I32_, i32_, 0);
   }
   #[inline]
   pub fn add_u32_(&mut self, u32_: u32) {
-    self.fbb_.push_slot::<u32>(TypeAliases::VT_U32_, u32_, 0);
+    self.table_builder.push_slot::<u32>(TypeAliases::VT_U32_, u32_, 0);
   }
   #[inline]
   pub fn add_i64_(&mut self, i64_: i64) {
-    self.fbb_.push_slot::<i64>(TypeAliases::VT_I64_, i64_, 0);
+    self.table_builder.push_slot::<i64>(TypeAliases::VT_I64_, i64_, 0);
   }
   #[inline]
   pub fn add_u64_(&mut self, u64_: u64) {
-    self.fbb_.push_slot::<u64>(TypeAliases::VT_U64_, u64_, 0);
+    self.table_builder.push_slot::<u64>(TypeAliases::VT_U64_, u64_, 0);
   }
   #[inline]
   pub fn add_f32_(&mut self, f32_: f32) {
-    self.fbb_.push_slot::<f32>(TypeAliases::VT_F32_, f32_, 0.0);
+    self.table_builder.push_slot::<f32>(TypeAliases::VT_F32_, f32_, 0.0);
   }
   #[inline]
   pub fn add_f64_(&mut self, f64_: f64) {
-    self.fbb_.push_slot::<f64>(TypeAliases::VT_F64_, f64_, 0.0);
+    self.table_builder.push_slot::<f64>(TypeAliases::VT_F64_, f64_, 0.0);
   }
   #[inline]
   pub fn add_v8(&mut self, v8: flatbuffers::WIPOffset<flatbuffers::Vector<'b , i8>>) {
-    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(TypeAliases::VT_V8, v8);
+    self.table_builder.push_slot_always::<flatbuffers::WIPOffset<_>>(TypeAliases::VT_V8, v8);
   }
   #[inline]
   pub fn add_vf64(&mut self, vf64: flatbuffers::WIPOffset<flatbuffers::Vector<'b , f64>>) {
-    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(TypeAliases::VT_VF64, vf64);
+    self.table_builder.push_slot_always::<flatbuffers::WIPOffset<_>>(TypeAliases::VT_VF64, vf64);
   }
   #[inline]
   pub fn new(_fbb: &'b mut flatbuffers::FlatBufferBuilder<'a>) -> TypeAliasesBuilder<'a, 'b> {
-    let start = _fbb.start_table();
-    TypeAliasesBuilder {
-      fbb_: _fbb,
-      start_: start,
-    }
+    let table_builder = _fbb.start_table();
+    TypeAliasesBuilder { table_builder }
   }
   #[inline]
   pub fn finish(self) -> flatbuffers::WIPOffset<TypeAliases<'a>> {
-    let o = self.fbb_.end_table(self.start_);
-    flatbuffers::WIPOffset::new(o.value())
+    let t = self.table_builder.end_table();
+    flatbuffers::WIPOffset::new(t.value())
   }
 }
 

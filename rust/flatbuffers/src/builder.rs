@@ -24,7 +24,6 @@ use std::slice::from_raw_parts;
 use endian_scalar::{emplace_scalar, read_scalar_at};
 use primitives::*;
 use push::{Push, PushAlignment};
-use table::Table;
 use vector::{SafeSliceAccess, Vector};
 use vtable::{field_index_to_field_offset, VTable};
 use vtable_writer::VTableWriter;
@@ -36,6 +35,94 @@ struct FieldLoc {
     off: UOffsetT,
     id: VOffsetT,
 }
+// TODO(cneo): 
+// * Consider using Result instead of assertions?
+// * Some of the assertions are for lack of linear type.
+// * Consider moving `write_vtable` into TableBuilder.
+// * field_locs hashmap? You shouldn't override a field.
+// * Also, written-vtables hashmap? Is this faster than
+//   find_duplicate_stored_vtable_revloc?
+
+/// The TableBuilder has a mutable reference to the FlatBufferBuilder and
+/// builds Tables as per the FlatBuffer schema. Users need to know the
+/// `slot_offset` of the variables pushed onto the table.
+pub struct TableBuilder<'fbb, 'a>{
+    start: WIPOffset<TableUnfinishedWIPOffset>,
+    fbb: &'a mut FlatBufferBuilder<'fbb>,
+    end_table_called: bool,
+}
+impl <'fbb, 'a> TableBuilder<'fbb, 'a> {
+    #[inline]
+    pub fn push_slot<X: Push + PartialEq>(
+        &mut self,
+        slot_offset: VOffsetT,
+        x: X, default: X) {
+        if x != default {
+            self.push_slot_always(slot_offset, x);
+        }
+    }
+    #[inline]
+    pub fn push_slot_always<X: Push>(&mut self, slot_offset: VOffsetT, x: X) {
+        let offset = self.fbb.push(x);
+        let loc = FieldLoc { id: slot_offset, off: offset.value() };
+        self.fbb.field_locs.push(loc);
+    }
+    #[inline]
+    pub fn end_table(mut self) -> WIPOffset<TableFinishedWIPOffset> {
+        let table_offset = self.fbb.write_vtable(self.start);
+        self.fbb.field_locs.clear();
+        self.end_table_called = true;
+        self.fbb.nested = false;
+        WIPOffset::new(table_offset.value())
+    }
+    /// Finishes a VTable, `required_fields` specifies vtable entries that must
+    /// be set (and the entry's name for the error).
+    #[inline]
+    pub fn end_table_requiring(
+        self,
+        required_fields: &[(VOffsetT, &'static str)]
+    ) -> WIPOffset<TableFinishedWIPOffset> {
+        for (id, name) in required_fields.iter() {
+            let present = self.fbb.field_locs.iter()
+                .any(|f| f.id == *id && f.off != 0);
+            assert!(present, "Missing required field, {}", name);
+        }
+        self.end_table()
+    }
+}
+#[allow(dead_code)]
+impl <'fbb, 'a> TableBuilder<'fbb, 'a> {
+    fn drop(&mut self) {
+        // This is a hack to force users to call `end_table` because Rust does
+        // not have linear types. Letting TableBuilder fall out of scope leaves
+        // the flatbuffer in a weird state and is an error.
+        debug_assert!(self.end_table_called,
+                      "TableBuilder dropped before `end_table` was called.");
+    }
+}
+
+
+#[allow(dead_code)]
+pub struct VectorBuilder<'a, 'fbb, T: Push>{
+    fbb: &'a mut FlatBufferBuilder<'fbb>,
+    num_elems: usize,
+    // This phantom ensures a consistent type is pushed.
+    // TODO(cneo): Consider checking bounds?
+    phantom: PhantomData<T>,
+}
+#[allow(dead_code)]
+impl <'a, 'fbb, T: Push> VectorBuilder<'a, 'fbb, T> {
+    pub fn push(&mut self, x: T) {
+        self.fbb.push(x);
+    }
+    pub fn end_vector(self) -> WIPOffset<Vector<'fbb, T>> {
+        let VectorBuilder { fbb, num_elems, .. } = self;
+        let o = fbb.push(num_elems as UOffsetT);
+        WIPOffset::new(o.value())
+    }
+
+}
+
 
 /// FlatBufferBuilder builds a FlatBuffer through manipulating its internal
 /// state. It has an owned `Vec<u8>` that grows as needed (up to the hardcoded
@@ -44,9 +131,12 @@ struct FieldLoc {
 pub struct FlatBufferBuilder<'fbb> {
     owned_buf: Vec<u8>,
     head: usize,
-
+    // Used by TableBuilder to keep track of where fields are placed.
+    // It lives in this struct for reuse, avoiding allocations.
+    // INVARIANT: field_locs is empty if no TableBuilder exists.
     field_locs: Vec<FieldLoc>,
-    written_vtable_revpos: Vec<UOffsetT>, // cleared
+    // cleared when reset.
+    written_vtable_revpos: Vec<UOffsetT>,
 
     nested: bool,
 
@@ -70,6 +160,7 @@ impl<'fbb> FlatBuffer {
     /// function, because it re-uses the FlatBuffer's existing heap-allocated
     /// `Vec<u8>` internal buffer. This offers significant speed improvements
     /// as compared to creating a new FlatBufferBuilder for every new object.
+    #[inline]
     pub fn reset(mut self) -> FlatBufferBuilder<'fbb> {
         // memset only the part of the buffer that could be dirty:
         {
@@ -79,7 +170,7 @@ impl<'fbb> FlatBuffer {
                 write_bytes(ptr, 0, to_clear);
             }
         }
-        let FlatBuffer { owned_buf, head: _, field_locs, mut written_vtable_revpos } = self;
+        let FlatBuffer { owned_buf, field_locs, mut written_vtable_revpos, .. } = self;
         written_vtable_revpos.clear();
         let head = owned_buf.len();
         FlatBufferBuilder {
@@ -100,6 +191,7 @@ impl<'fbb> FlatBuffer {
     }
     /// Destroy the FlatBuffer, returning its internal byte vector
     /// and the index into it that represents the start of valid data.
+    #[inline]
     pub fn collapse(self) -> (Vec<u8>, usize) {
         (self.owned_buf, self.head)
     }
@@ -135,7 +227,6 @@ impl<'fbb> FlatBufferBuilder<'fbb> {
         }
     }
 
-    // TODO(cneo): Delete?
     /// Reset the FlatBufferBuilder internal state. Use this method after a
     /// call to a `finish` function in order to re-use a FlatBufferBuilder.
     ///
@@ -147,6 +238,7 @@ impl<'fbb> FlatBufferBuilder<'fbb> {
     /// heap-allocated `Vec<u8>` internal buffer. This offers significant speed
     /// improvements as compared to creating a new FlatBufferBuilder for every
     /// new object.
+    #[inline]
     pub fn reset(&mut self) {
         // memset only the part of the buffer that could be dirty:
         {
@@ -167,6 +259,7 @@ impl<'fbb> FlatBufferBuilder<'fbb> {
 
     /// Destroy the FlatBufferBuilder, returning its internal byte vector
     /// and the index into it that represents the start of valid data.
+    #[inline]
     pub fn collapse(self) -> (Vec<u8>, usize) {
         (self.owned_buf, self.head)
     }
@@ -187,27 +280,6 @@ impl<'fbb> FlatBufferBuilder<'fbb> {
         WIPOffset::new(self.used_space() as UOffsetT)
     }
 
-    /// Push a Push'able value onto the front of the in-progress data, and
-    /// store a reference to it in the in-progress vtable. If the value matches
-    /// the default, then this is a no-op.
-    #[inline]
-    pub fn push_slot<X: Push + PartialEq>(&mut self, slotoff: VOffsetT, x: X, default: X) {
-        self.assert_nested("push_slot");
-        if x == default {
-            return;
-        }
-        self.push_slot_always(slotoff, x);
-    }
-
-    /// Push a Push'able value onto the front of the in-progress data, and
-    /// store a reference to it in the in-progress vtable.
-    #[inline]
-    pub fn push_slot_always<X: Push>(&mut self, slotoff: VOffsetT, x: X) {
-        self.assert_nested("push_slot_always");
-        let off = self.push(x);
-        self.track_field(slotoff, off.value());
-    }
-
     /// Retrieve the number of vtables that have been serialized into the
     /// FlatBuffer. This is primarily used to check vtable deduplication.
     #[inline]
@@ -221,31 +293,10 @@ impl<'fbb> FlatBufferBuilder<'fbb> {
     ///
     /// Users probably want to use `push_slot` to add values after calling this.
     #[inline]
-    pub fn start_table(&mut self) -> WIPOffset<TableUnfinishedWIPOffset> {
-        self.assert_not_nested(
-            "start_table can not be called when a table or vector is under construction",
-        );
+    pub fn start_table<'a> (&'a mut self) -> TableBuilder<'fbb, 'a> {
+        let start = WIPOffset::new(self.used_space() as UOffsetT);
         self.nested = true;
-
-        WIPOffset::new(self.used_space() as UOffsetT)
-    }
-
-    /// End a Table write.
-    ///
-    /// Asserts that the builder is in a nested state.
-    #[inline]
-    pub fn end_table(
-        &mut self,
-        off: WIPOffset<TableUnfinishedWIPOffset>,
-    ) -> WIPOffset<TableFinishedWIPOffset> {
-        self.assert_nested("end_table");
-
-        let o = self.write_vtable(off);
-
-        self.nested = false;
-        self.field_locs.clear();
-
-        WIPOffset::new(o.value())
+        TableBuilder { fbb: self, start, end_table_called: false }
     }
 
     /// Start a Vector write.
@@ -378,21 +429,6 @@ impl<'fbb> FlatBufferBuilder<'fbb> {
     pub fn unfinished_data(&self) -> &[u8] {
         &self.owned_buf[self.head..]
     }
-    /// Assert that a field is present in the just-finished Table.
-    ///
-    /// This is somewhat low-level and is mostly used by the generated code.
-    #[inline]
-    pub fn required(
-        &self,
-        tab_revloc: WIPOffset<TableFinishedWIPOffset>,
-        slot_byte_loc: VOffsetT,
-        assert_msg_name: &'static str,
-    ) {
-        let idx = self.used_space() - tab_revloc.value() as usize;
-        let tab = Table::new(&self.owned_buf[self.head..], idx);
-        let o = tab.vtable().get(slot_byte_loc) as usize;
-        assert!(o != 0, "missing required field {}", assert_msg_name);
-    }
 
     /// Finalize the FlatBuffer by: aligning it, pushing an optional file
     /// identifier on to it, pushing a size prefix on to it, and marking the
@@ -425,16 +461,8 @@ impl<'fbb> FlatBufferBuilder<'fbb> {
         self.owned_buf.len() - self.head as usize
     }
 
-    #[inline]
-    fn track_field(&mut self, slot_off: VOffsetT, off: UOffsetT) {
-        let fl = FieldLoc {
-            id: slot_off,
-            off: off,
-        };
-        self.field_locs.push(fl);
-    }
-
     /// Write the VTable, if it is new.
+    #[inline]
     fn write_vtable(
         &mut self,
         table_tail_revloc: WIPOffset<TableUnfinishedWIPOffset>,
@@ -444,7 +472,7 @@ impl<'fbb> FlatBufferBuilder<'fbb> {
         // Write the vtable offset, which is the start of any Table.
         // We fill its value later.
         let object_revloc_to_vtable: WIPOffset<VTableWIPOffset> =
-            WIPOffset::new(self.push::<UOffsetT>(0xF0F0F0F0 as UOffsetT).value());
+            WIPOffset::new(self.push::<UOffsetT>(0xF0F0_F0F0 as UOffsetT).value());
 
         // Layout of the data this function will create when a new vtable is
         // needed.
@@ -534,7 +562,7 @@ impl<'fbb> FlatBufferBuilder<'fbb> {
         {
             let n = self.head + self.used_space() - object_revloc_to_vtable.value() as usize;
             let saw = read_scalar_at::<UOffsetT>(&self.owned_buf, n);
-            debug_assert_eq!(saw, 0xF0F0F0F0);
+            debug_assert_eq!(saw, 0xF0F0_F0F0);
             emplace_scalar::<SOffsetT>(
                 &mut self.owned_buf[n..n + SIZE_SOFFSET],
                 vt_use as SOffsetT - object_revloc_to_vtable.value() as SOffsetT,
@@ -598,6 +626,7 @@ impl<'fbb> FlatBufferBuilder<'fbb> {
 
     // with or without a size prefix changes how we load the data, so finish*
     // functions are split along those lines.
+    #[inline]
     fn finish_with_opts<T>(
         mut self,
         root: WIPOffset<T>,
@@ -662,7 +691,7 @@ impl<'fbb> FlatBufferBuilder<'fbb> {
     #[inline]
     fn push_bytes_unprefixed(&mut self, x: &[u8]) -> UOffsetT {
         let n = self.make_space(x.len());
-        &mut self.owned_buf[n..n + x.len()].copy_from_slice(x);
+        self.owned_buf[n..n + x.len()].copy_from_slice(x);
 
         n as UOffsetT
     }

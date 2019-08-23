@@ -41,6 +41,7 @@ fn traverse_canonical_buffer(bench: &mut Bencher) {
 
 fn create_canonical_buffer_then_reset(bench: &mut Bencher) {
     // Use an option so you can take and replace from a reference.
+    // This has the cost of moving the FBB back and forth from the stack.
     let mut fbb = Some(flatbuffers::FlatBufferBuilder::new());
     let mut n = 0;
     let mut iter = || {

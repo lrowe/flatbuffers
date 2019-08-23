@@ -883,8 +883,8 @@ class RustGenerator : public BaseGenerator {
                ", " + typname + ">>";
       }
       case ftVectorOfUnionValue: {
-        return "flatbuffers::WIPOffset<flatbuffers::Vector<" + lifetime + \
-               ", flatbuffers::ForwardsUOffset<flatbuffers::Table<" + \
+        return "flatbuffers::WIPOffset<flatbuffers::Vector<" + lifetime +
+               ", flatbuffers::ForwardsUOffset<flatbuffers::Table<" +
                lifetime + ">>>";
       }
       case ftEnumKey: {
@@ -929,26 +929,26 @@ class RustGenerator : public BaseGenerator {
       case ftInteger:
       case ftFloat: {
         const auto typname = GetTypeBasic(field.value.type);
-        return "self.fbb_.push_slot::<" + typname + ">";
+        return "self.table_builder.push_slot::<" + typname + ">";
       }
       case ftBool: {
-        return "self.fbb_.push_slot::<bool>";
+        return "self.table_builder.push_slot::<bool>";
       }
 
       case ftEnumKey:
       case ftUnionKey: {
         const auto underlying_typname = GetTypeBasic(type);
-        return "self.fbb_.push_slot::<" + underlying_typname + ">";
+        return "self.table_builder.push_slot::<" + underlying_typname + ">";
       }
 
       case ftStruct: {
         const std::string typname = WrapInNameSpace(*type.struct_def);
-        return "self.fbb_.push_slot_always::<&" + typname + ">";
+        return "self.table_builder.push_slot_always::<&" + typname + ">";
       }
       case ftTable: {
         const auto typname = WrapInNameSpace(*type.struct_def);
-        return "self.fbb_.push_slot_always::<flatbuffers::WIPOffset<" + \
-               typname +  ">>";
+        return "self.table_builder.push_slot_always::<"
+            "flatbuffers::WIPOffset<" + typname +  ">>";
       }
 
       case ftUnionValue:
@@ -961,7 +961,8 @@ class RustGenerator : public BaseGenerator {
       case ftVectorOfTable:
       case ftVectorOfString:
       case ftVectorOfUnionValue: {
-        return "self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>";
+        return "self.table_builder.push_slot_always::<"
+            "flatbuffers::WIPOffset<_>>";
       }
     }
     return "INVALID_CODE_GENERATION"; // for return analysis
@@ -1378,9 +1379,7 @@ class RustGenerator : public BaseGenerator {
 
     // Generate a builder struct:
     code_ += "pub struct {{STRUCT_NAME}}Builder<'a: 'b, 'b> {";
-    code_ += "  fbb_: &'b mut flatbuffers::FlatBufferBuilder<'a>,";
-    code_ += "  start_: flatbuffers::WIPOffset<"
-             "flatbuffers::TableUnfinishedWIPOffset>,";
+    code_ += "  table_builder: flatbuffers::TableBuilder<'a, 'b>,";
     code_ += "}";
 
     // Generate builder functions:
@@ -1429,30 +1428,42 @@ class RustGenerator : public BaseGenerator {
         "  pub fn new(_fbb: &'b mut flatbuffers::FlatBufferBuilder<'a>) -> "
         "{{STRUCT_NAME}}Builder<'a, 'b> {";
     code_.SetValue("NUM_FIELDS", NumToString(struct_def.fields.vec.size()));
-    code_ += "    let start = _fbb.start_table();";
-    code_ += "    {{STRUCT_NAME}}Builder {";
-    code_ += "      fbb_: _fbb,";
-    code_ += "      start_: start,";
-    code_ += "    }";
+    code_ += "    let table_builder = _fbb.start_table();";
+    code_ += "    {{STRUCT_NAME}}Builder { table_builder }";
     code_ += "  }";
 
     // finish() function.
     code_ += "  #[inline]";
     code_ += "  pub fn finish(self) -> "
              "flatbuffers::WIPOffset<{{STRUCT_NAME}}<'a>> {";
-    code_ += "    let o = self.fbb_.end_table(self.start_);";
 
+    bool has_required_fields = false;
     for (auto it = struct_def.fields.vec.begin();
          it != struct_def.fields.vec.end(); ++it) {
       const auto &field = **it;
       if (!field.deprecated && field.required) {
-        code_.SetValue("FIELD_NAME", MakeSnakeCase(Name(field)));
-        code_.SetValue("OFFSET_NAME", GetFieldOffsetName(field));
-        code_ += "    self.fbb_.required(o, {{STRUCT_NAME}}::{{OFFSET_NAME}},"
-                 "\"{{FIELD_NAME}}\");";
+        has_required_fields = true;
+        break;
       }
     }
-    code_ += "    flatbuffers::WIPOffset::new(o.value())";
+    if (!has_required_fields) {
+      code_ += "    let t = self.table_builder.end_table();";
+    } else {
+      code_ += "    let required_fields = [";
+      for (auto it = struct_def.fields.vec.begin();
+           it != struct_def.fields.vec.end(); ++it) {
+        const auto &field = **it;
+        if (!field.deprecated && field.required) {
+          code_.SetValue("FIELD_NAME", MakeSnakeCase(Name(field)));
+          code_.SetValue("OFFSET_NAME", GetFieldOffsetName(field));
+          code_ += "      ({{STRUCT_NAME}}::{{OFFSET_NAME}},"
+                "\"{{FIELD_NAME}}\"),";
+        }
+      }
+      code_ += "    ];";
+      code_ += "    let t = self.table_builder.end_table_requiring(&required_fields);";
+    }
+    code_ += "    flatbuffers::WIPOffset::new(t.value())";
     code_ += "  }";
     code_ += "}";
     code_ += "";
