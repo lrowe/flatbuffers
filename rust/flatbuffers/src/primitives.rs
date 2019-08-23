@@ -63,6 +63,7 @@ pub type VOffsetT = i16;
 pub struct TableFinishedWIPOffset {}
 
 /// TableUnfinishedWIPOffset marks a WIPOffset as being for an unfinished table.
+#[derive(Clone, Copy)]
 pub struct TableUnfinishedWIPOffset {}
 
 /// UnionWIPOffset marks a WIPOffset as being for a union value.
